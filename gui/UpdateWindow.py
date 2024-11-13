@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox
-import requests
 import subprocess
-import traceback  # traceback 모듈 추가
+import traceback
 import os
+
 
 class UpdateWindow(QDialog):
     def __init__(self, parent=None):
@@ -32,31 +32,48 @@ class UpdateWindow(QDialog):
         # 업데이트 상태 확인
         self.check_for_updates()
 
-    def get_latest_commit(self, repo_url):
+    def get_latest_commit(self):
         """원격 저장소의 최신 커밋 해시 가져오기"""
-        # 기본 브랜치를 main에서 master로 변경
-        api_url = f"https://api.github.com/repos/{repo_url}/commits/master"
         try:
-            response = requests.get(api_url)
-            response.raise_for_status()  # 응답 상태 코드가 200이 아닌 경우 예외 발생
-            return response.json()["sha"]
-        except requests.exceptions.RequestException as e:
-            error_message = f"최신 버전 확인 중 오류 발생:\n{traceback.format_exc()}"
-            QMessageBox.critical(self, "오류", f"GitHub API 요청 실패: {error_message}")
+            # 현재 작업 디렉터리 가져오기
+            project_dir = os.getcwd()
+
+            # 원격 브랜치 정보를 로컬에 업데이트
+            fetch_result = subprocess.run(
+                ["git", "fetch"], capture_output=True, text=True, cwd=project_dir
+            )
+            if fetch_result.returncode != 0:
+                raise subprocess.CalledProcessError(fetch_result.returncode, fetch_result.args, fetch_result.stdout,
+                                                    fetch_result.stderr)
+
+            # 원격 브랜치의 최신 커밋 해시 가져오기
+            result = subprocess.run(
+                ["git", "rev-parse", "origin/master"], capture_output=True, text=True, cwd=project_dir
+            )
+            if result.returncode != 0:
+                raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+
+            return result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            error_message = f"원격 최신 버전 확인 중 오류 발생:\n{traceback.format_exc()}\n\nCommand: {e.cmd}\nReturn code: {e.returncode}\nError output:\n{e.stderr}"
+            QMessageBox.critical(self, "오류", error_message)
+        except Exception as e:
+            error_message = f"원격 최신 버전 확인 중 예외 발생:\n{traceback.format_exc()}"
+            QMessageBox.critical(self, "오류", error_message)
         return None
 
     def get_local_commit(self):
         """로컬 저장소의 현재 커밋 해시 가져오기"""
         try:
+            project_dir = os.getcwd()
             result = subprocess.run(
-                ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
-                cwd="C:\\Users\\CAD09\\Desktop\\projectMini"
+                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=project_dir
             )
-            if result.returncode != 0:  # Git 명령어 실패 시
+            if result.returncode != 0:
                 raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
-            error_message = f"로컬 Git 명령어 실행 중 오류 발생:\n{traceback.format_exc()}\n\nError output:\n{e.stderr}"
+            error_message = f"로컬 Git 명령어 실행 중 오류 발생:\n{traceback.format_exc()}\n\nCommand: {e.cmd}\nReturn code: {e.returncode}\nError output:\n{e.stderr}"
             QMessageBox.critical(self, "오류", error_message)
         except Exception as e:
             error_message = f"현재 버전 확인 중 오류 발생:\n{traceback.format_exc()}"
@@ -65,8 +82,7 @@ class UpdateWindow(QDialog):
 
     def check_for_updates(self):
         """로컬 및 원격 커밋을 비교하여 업데이트 필요 여부 확인"""
-        repo_url = "durikang/miniproject-Analysis-Graph"
-        latest_commit = self.get_latest_commit(repo_url)
+        latest_commit = self.get_latest_commit()
         local_commit = self.get_local_commit()
 
         if latest_commit and local_commit:
@@ -86,9 +102,15 @@ class UpdateWindow(QDialog):
         try:
             project_dir = os.getcwd()  # 현재 작업 디렉터리
             result = subprocess.run(["git", "pull"], capture_output=True, text=True, cwd=project_dir)
+            if result.returncode != 0:
+                raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+
             QMessageBox.information(self, "업데이트 완료", "업데이트가 완료되었습니다.\n프로그램을 다시 시작해 주세요.")
             self.update_button.setEnabled(False)  # 업데이트 완료 후 버튼 비활성화
             print(result.stdout)
+        except subprocess.CalledProcessError as e:
+            error_message = f"업데이트 중 오류 발생:\n{traceback.format_exc()}\n\nCommand: {e.cmd}\nReturn code: {e.returncode}\nError output:\n{e.stderr}"
+            QMessageBox.critical(self, "업데이트 오류", error_message)
         except Exception as e:
-            error_message = f"업데이트 중 오류가 발생했습니다:\n{traceback.format_exc()}"
+            error_message = f"업데이트 중 오류 발생:\n{traceback.format_exc()}"
             QMessageBox.critical(self, "업데이트 오류", error_message)
