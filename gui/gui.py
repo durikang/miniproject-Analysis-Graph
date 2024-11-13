@@ -200,5 +200,10 @@ class FinancialApp(QWidget):
 
     def open_update_window(self):
         """업데이트 확인 창 열기"""
-        update_window = UpdateWindow(self)
-        update_window.exec_()
+        try:
+            # 클래스 속성으로 저장하여 참조 유지
+            self.update_window = UpdateWindow(self)
+            self.update_window.exec_()
+        except Exception as e:
+            print(f"[DEBUG] An error occurred while opening the update window: {e}")
+            QMessageBox.critical(self, "오류", f"업데이트 창을 여는 도중 오류가 발생했습니다: {e}")

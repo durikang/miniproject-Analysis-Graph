@@ -1,3 +1,4 @@
+import json
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox
 import subprocess
 import traceback
@@ -7,8 +8,8 @@ import os
 class UpdateWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("업데이트 확인")
-        self.setGeometry(200, 200, 400, 200)
+        self.setWindowTitle("업데이트 확인 옵션")
+        self.setGeometry(200, 200, 400, 250)
 
         # 레이아웃 설정
         layout = QVBoxLayout()
@@ -16,6 +17,10 @@ class UpdateWindow(QDialog):
         # 현재 버전과 최신 버전 정보를 표시할 라벨
         self.current_version_label = QLabel("현재 버전: 확인 중...")
         self.latest_version_label = QLabel("최신 버전: 확인 중...")
+
+        # 최신 버전 확인 버튼
+        self.check_update_button = QPushButton("최신 버전 확인하기")
+        self.check_update_button.clicked.connect(self.check_for_updates)
 
         # 업데이트 버튼
         self.update_button = QPushButton("업데이트")
@@ -25,73 +30,115 @@ class UpdateWindow(QDialog):
         # 레이아웃에 위젯 추가
         layout.addWidget(self.current_version_label)
         layout.addWidget(self.latest_version_label)
+        layout.addWidget(self.check_update_button)
         layout.addWidget(self.update_button)
 
         self.setLayout(layout)
 
-        # 업데이트 상태 확인
-        self.check_for_updates()
+        # 설정 파일에서 메타 정보 경로 가져오기
+        self.metadata_path = self.get_metadata_path_from_config()
 
-    def get_latest_commit(self):
-        """원격 저장소의 최신 커밋 해시 가져오기"""
+        # 현재 버전 불러오기
+        self.local_version = self.load_local_version()
+
+    def get_metadata_path_from_config(self):
+        """config.json에서 메타 정보 파일 경로를 절대 경로로 읽어옴"""
         try:
-            # 현재 작업 디렉터리 가져오기
+            # config.json의 절대 경로를 직접 지정합니다.
+            config_path = r"C:\Users\CAD09\Desktop\projectMini\config\config.json"  # 절대 경로 지정
+            print(f"Config path: {config_path}")  # 디버그: config.json 경로 확인
+
+            if not os.path.exists(config_path):
+                raise FileNotFoundError("config.json 파일이 없습니다.")
+
+            with open(config_path, "r") as config_file:
+                config = json.load(config_file)
+                metadata_path = config.get("metadata_path")
+                print(f"Metadata path from config: {metadata_path}")  # 디버그: metadata_path 확인
+
+                if metadata_path and os.path.isabs(metadata_path):
+                    return metadata_path
+                else:
+                    return os.path.join(os.path.dirname(config_path), metadata_path)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            QMessageBox.critical(self, "오류", f"설정 파일을 불러올 수 없습니다: {e}")
+            return "config/metadata.json"  # 기본 경로로 설정
+
+    def load_local_version(self):
+        """메타 정보에서 현재 시맨틱 버전을 불러옴"""
+        try:
+            with open(self.metadata_path, "r", encoding="utf-8") as file:  # 인코딩을 UTF-8로 지정
+                metadata = json.load(file)
+                version = metadata.get("version", "버전 정보 없음")
+                self.current_version_label.setText(f"현재 버전: {version}")
+                return version
+        except FileNotFoundError:
+            self.current_version_label.setText("현재 버전: 메타 정보 파일 없음")
+            return None
+        except json.JSONDecodeError:
+            self.current_version_label.setText("현재 버전: 메타 정보 파일 오류")
+            return None
+
+    def get_latest_tag(self):
+        """원격 저장소의 최신 태그 가져오기"""
+        try:
             project_dir = os.getcwd()
 
-            # 원격 브랜치 정보를 로컬에 업데이트
-            fetch_result = subprocess.run(
-                ["git", "fetch"], capture_output=True, text=True, cwd=project_dir
-            )
+            # Step 1: git fetch --tags
+            fetch_result = subprocess.run(["git", "fetch", "--tags"], capture_output=True, text=True, cwd=project_dir,
+                                          encoding="utf-8")
             if fetch_result.returncode != 0:
                 raise subprocess.CalledProcessError(fetch_result.returncode, fetch_result.args, fetch_result.stdout,
                                                     fetch_result.stderr)
 
-            # 원격 브랜치의 최신 커밋 해시 가져오기
-            result = subprocess.run(
-                ["git", "rev-parse", "origin/master"], capture_output=True, text=True, cwd=project_dir
+            # Step 2: git rev-list --tags --max-count=1
+            rev_list_result = subprocess.run(
+                ["git", "rev-list", "--tags", "--max-count=1"],
+                capture_output=True, text=True, cwd=project_dir, encoding="utf-8"
             )
-            if result.returncode != 0:
-                raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+            if rev_list_result.returncode != 0:
+                raise subprocess.CalledProcessError(rev_list_result.returncode, rev_list_result.args,
+                                                    rev_list_result.stdout, rev_list_result.stderr)
 
-            return result.stdout.strip()
+            latest_commit_id = rev_list_result.stdout.strip()
+            if not latest_commit_id:
+                raise ValueError("태그가 없습니다. 저장소에 태그를 추가하세요.")
+
+            # Step 3: git describe --tags <commit_id>
+            describe_result = subprocess.run(
+                ["git", "describe", "--tags", latest_commit_id],
+                capture_output=True, text=True, cwd=project_dir, encoding="utf-8"
+            )
+            if describe_result.returncode != 0:
+                raise subprocess.CalledProcessError(describe_result.returncode, describe_result.args,
+                                                    describe_result.stdout, describe_result.stderr)
+
+            latest_tag = describe_result.stdout.strip()
+            self.latest_version_label.setText(f"최신 버전: {latest_tag}")
+            return latest_tag
+
         except subprocess.CalledProcessError as e:
             error_message = f"원격 최신 버전 확인 중 오류 발생:\n{traceback.format_exc()}\n\nCommand: {e.cmd}\nReturn code: {e.returncode}\nError output:\n{e.stderr}"
             QMessageBox.critical(self, "오류", error_message)
+        except ValueError as e:
+            QMessageBox.critical(self, "오류", str(e))
         except Exception as e:
             error_message = f"원격 최신 버전 확인 중 예외 발생:\n{traceback.format_exc()}"
             QMessageBox.critical(self, "오류", error_message)
         return None
 
-    def get_local_commit(self):
-        """로컬 저장소의 현재 커밋 해시 가져오기"""
-        try:
-            project_dir = os.getcwd()
-            result = subprocess.run(
-                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=project_dir
-            )
-            if result.returncode != 0:
-                raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            error_message = f"로컬 Git 명령어 실행 중 오류 발생:\n{traceback.format_exc()}\n\nCommand: {e.cmd}\nReturn code: {e.returncode}\nError output:\n{e.stderr}"
-            QMessageBox.critical(self, "오류", error_message)
-        except Exception as e:
-            error_message = f"현재 버전 확인 중 오류 발생:\n{traceback.format_exc()}"
-            QMessageBox.critical(self, "오류", error_message)
-        return None
-
     def check_for_updates(self):
-        """로컬 및 원격 커밋을 비교하여 업데이트 필요 여부 확인"""
-        latest_commit = self.get_latest_commit()
-        local_commit = self.get_local_commit()
+        """로컬 시맨틱 버전과 원격 태그 버전을 비교하여 업데이트 필요 여부 확인"""
+        latest_version = self.get_latest_tag()
 
-        if latest_commit and local_commit:
-            self.current_version_label.setText(f"현재 버전: {local_commit}")
-            self.latest_version_label.setText(f"최신 버전: {latest_commit}")
-
-            if local_commit != latest_commit:
-                self.update_button.setEnabled(True)  # 업데이트가 가능하면 버튼 활성화
-                QMessageBox.information(self, "업데이트 가능", "새 버전이 있습니다.")
+        if self.local_version and latest_version:
+            if self.local_version != latest_version:
+                self.update_button.setEnabled(True)
+                QMessageBox.information(
+                    self,
+                    "업데이트 필요",
+                    f"현재 버전:\n{self.local_version}\n\n최신 버전:\n{latest_version}\n\n새 버전이 있습니다.",
+                )
             else:
                 QMessageBox.information(self, "최신 상태", "프로그램이 최신 상태입니다.")
         else:
@@ -100,14 +147,13 @@ class UpdateWindow(QDialog):
     def perform_update(self):
         """업데이트를 수행하는 메서드"""
         try:
-            project_dir = os.getcwd()  # 현재 작업 디렉터리
+            project_dir = os.getcwd()
             result = subprocess.run(["git", "pull"], capture_output=True, text=True, cwd=project_dir)
             if result.returncode != 0:
                 raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
 
             QMessageBox.information(self, "업데이트 완료", "업데이트가 완료되었습니다.\n프로그램을 다시 시작해 주세요.")
-            self.update_button.setEnabled(False)  # 업데이트 완료 후 버튼 비활성화
-            print(result.stdout)
+            self.update_button.setEnabled(False)
         except subprocess.CalledProcessError as e:
             error_message = f"업데이트 중 오류 발생:\n{traceback.format_exc()}\n\nCommand: {e.cmd}\nReturn code: {e.returncode}\nError output:\n{e.stderr}"
             QMessageBox.critical(self, "업데이트 오류", error_message)
