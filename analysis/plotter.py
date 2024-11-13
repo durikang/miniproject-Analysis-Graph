@@ -159,3 +159,29 @@ class Plotter:
         except Exception as e:
             print(f"[Unexpected Error - File Save]: {e}")
             raise
+
+    def save_data_as_csv(self, item_code, data_type):
+        """선택된 회사와 항목의 데이터를 CSV 형식으로 저장합니다."""
+        try:
+            # 데이터 타입에 따라 적절한 데이터 선택
+            data = self.income_statement_data if data_type == "손익계산서" else self.balance_sheet_data
+
+            # 데이터 필터링
+            filtered_data = data[(data['회사명'] == self.company_name) & (data['항목코드'] == item_code)]
+
+            # CSV 파일로 저장할 경로 설정
+            config = config_manager.load_config()
+            csv_directory = config["income_result_path"] if data_type == "손익계산서" else config["balance_result_path"]
+            os.makedirs(csv_directory, exist_ok=True)
+            file_name = f"{self.company_name}_{item_code}_{data_type}.csv"
+            file_path = os.path.join(csv_directory, file_name)
+
+            # CSV로 파일 저장
+            filtered_data.to_csv(file_path, index=False, encoding='utf-8-sig')
+            print(f"[Info] Data saved successfully as CSV at: {file_path}")
+            return file_path
+
+        except Exception as e:
+            print(f"[Error - CSV Save]: {e}")
+            raise
+

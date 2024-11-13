@@ -8,9 +8,9 @@ from data import data_manager
 # 최상위 모듈에서 시작하도록 구조를 수정한 후:
 from gui.analysis_window import AnalysisWindow
 from gui.options_window import OptionsWindow
+from gui.AnalysisManager import AnalysisManager
 from.CsvConvertWindow import CsvConvertWindow
 from.UpdateWindow import UpdateWindow
-
 
 class FinancialApp(QWidget):
     def __init__(self):
@@ -44,11 +44,11 @@ class FinancialApp(QWidget):
 
         # 프로그램 제목 및 설명 추가
         title_label = QLabel("재무 분석 차트 (Financial Analysis Chart)")
-        title_label.setStyleSheet("font-size: 20px; font-weight: bold;")  # 제목 스타일 설정
-        title_label.setAlignment(Qt.AlignCenter)  # 제목 가운데 정렬
+        title_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignCenter)
 
         description_label = QLabel("재무상태표와 손익계산서를 시각화하여 기업의 재무 상태와 성과를 분석할 수 있는 프로그램입니다.")
-        description_label.setAlignment(Qt.AlignCenter)  # 설명 가운데 정렬
+        description_label.setAlignment(Qt.AlignCenter)
 
         main_layout.addWidget(title_label)
         main_layout.addWidget(description_label)
@@ -58,16 +58,14 @@ class FinancialApp(QWidget):
         self.selected_list = QListWidget()
         self.search_bar = QLineEdit(self)
 
-        # 분석 창 속성 초기화 (None으로 초기 설정)
-        self.analysis_window = None
-
         # Config 로드 및 UI 초기화
         self.config = config_manager.load_config()
-        self.init_ui()
+        self.analysis_manager = AnalysisManager(self.config, self)
 
         # 기존 레이아웃을 메인 레이아웃에 추가
         main_layout.addLayout(self.init_ui())
         self.setLayout(main_layout)
+
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -158,24 +156,21 @@ class FinancialApp(QWidget):
             self.company_list.addItem(item)
 
     def run_analysis(self):
-        """선택된 회사들에 대한 분석을 실행합니다."""
-        try:
-            selected_companies = [self.selected_list.item(i).text() for i in range(self.selected_list.count())]
-            if not selected_companies:
-                QMessageBox.warning(self, "경고", "분석을 실행할 회사를 선택하세요.")
-                return
+        """선택된 회사들에 대한 분석을 실행하고, AnalysisManager를 이용해 데이터를 처리합니다."""
+        selected_companies = [self.selected_list.item(i).text() for i in range(self.selected_list.count())]
+        if not selected_companies:
+            QMessageBox.warning(self, "경고", "분석을 실행할 회사를 선택하세요.")
+            return
 
-            balance_path = self.config.get("balance_data_path", "")
-            income_path = self.config.get("income_data_path", "")
+        # AnalysisManager를 통해 데이터 준비 및 분석 실행
+        income_statement_data, balance_sheet_data = self.analysis_manager.prepare_and_run_analysis(selected_companies)
 
-            income_statement_data, balance_sheet_data = data_manager.prepare_data_for_analysis(
-                balance_path, income_path, selected_companies
-            )
-
+        if income_statement_data is not None and balance_sheet_data is not None:
+            # AnalysisWindow를 열고 분석 결과를 표시
             self.open_analysis_window(income_statement_data, balance_sheet_data)
-        except Exception as e:
-            print(f"분석 실행 중 오류 발생: {e}")
-            QMessageBox.critical(self, "오류", f"분석 실행 중 오류 발생: {e}")
+
+            # CSV 저장 로직 호출
+            self.analysis_manager.save_combined_csv(income_statement_data, balance_sheet_data, selected_companies)
 
     def open_analysis_window(self, income_statement_data, balance_sheet_data):
         """손익계산서와 재무상태표 데이터를 받아서 새 창을 엽니다."""
