@@ -9,7 +9,7 @@ from data import data_manager
 from gui.analysis_window import AnalysisWindow
 from gui.options_window import OptionsWindow
 from.CsvConvertWindow import CsvConvertWindow
-
+from.UpdateWindow import UpdateWindow
 
 
 class FinancialApp(QWidget):
@@ -31,6 +31,11 @@ class FinancialApp(QWidget):
         csv_convert_action = QAction("CSV 변환", self)
         csv_convert_action.triggered.connect(self.open_csv_convert_window)
         options_menu.addAction(csv_convert_action)
+
+        # 업데이트 확인 메뉴 추가
+        update_action = QAction("업데이트 확인", self)
+        update_action.triggered.connect(self.open_update_window)
+        options_menu.addAction(update_action)
 
         # 레이아웃에 메뉴바 추가
         main_layout = QVBoxLayout(self)
@@ -191,3 +196,8 @@ class FinancialApp(QWidget):
         """CSV 변환 창 열기"""
         csv_convert_window = CsvConvertWindow(self)
         csv_convert_window.exec_()
+
+    def open_update_window(self):
+        """업데이트 확인 창 열기"""
+        update_window = UpdateWindow(self)
+        update_window.exec_()
