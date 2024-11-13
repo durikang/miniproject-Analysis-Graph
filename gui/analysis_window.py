@@ -37,7 +37,7 @@ class AnalysisWindow(QWidget):
 
         # 회사 선택 라벨과 드롭다운 메뉴를 수평으로 배치하는 레이아웃
         company_selection_layout = QHBoxLayout()
-        company_selection_layout.addWidget(QLabel("회사 선택"))
+        company_selection_layout.addWidget(QLabel("회사 선택ㅋㅋ"))
 
         # 회사 선택 드롭다운 메뉴
         self.company_menu = QComboBox()

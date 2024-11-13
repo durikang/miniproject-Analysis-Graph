@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageB
 import subprocess
 import traceback
 import os
-
+import sys
 
 class UpdateWindow(QDialog):
     def __init__(self, parent=None):
@@ -148,15 +148,63 @@ class UpdateWindow(QDialog):
         """업데이트를 수행하는 메서드"""
         try:
             project_dir = os.getcwd()
-            result = subprocess.run(["git", "pull"], capture_output=True, text=True, cwd=project_dir)
-            if result.returncode != 0:
-                raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
 
-            QMessageBox.information(self, "업데이트 완료", "업데이트가 완료되었습니다.\n프로그램을 다시 시작해 주세요.")
+            # git pull을 subprocess.Popen으로 실행하여 실시간 출력을 얻음
+            pull_process = subprocess.Popen(
+                ["git", "pull"],
+                cwd=project_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8"
+            )
+
+            # stdout과 stderr을 실시간으로 읽어서 콘솔에 출력
+            for line in pull_process.stdout:
+                print(f"[DEBUG] git pull: {line.strip()}")  # pull 진행 상황을 디버그 형식으로 출력
+
+            for error_line in pull_process.stderr:
+                print(f"[DEBUG] git pull (stderr): {error_line.strip()}")  # pull 오류 메시지 출력
+
+            # pull 명령어 완료 여부 확인
+            pull_process.wait()
+            if pull_process.returncode != 0:
+                raise subprocess.CalledProcessError(pull_process.returncode, pull_process.args)
+
+            # 업데이트 완료 후 최신 태그 가져오기
+            latest_version = self.get_latest_tag()
+
+            # metadata.json 파일 경로
+            metadata_path = self.metadata_path
+
+            # metadata.json 파일을 최신 버전으로 업데이트
+            try:
+                with open(metadata_path, "r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+                metadata["version"] = latest_version
+
+                # 업데이트된 메타 데이터를 다시 저장
+                with open(metadata_path, "w", encoding="utf-8") as f:
+                    json.dump(metadata, f, ensure_ascii=False, indent=4)
+                print(f"[DEBUG] metadata.json updated with latest version: {latest_version}")
+
+            except Exception as e:
+                print(f"[ERROR] metadata.json 업데이트 중 오류 발생: {e}")
+                QMessageBox.critical(self, "오류", f"metadata.json 업데이트 중 오류가 발생했습니다: {e}")
+
+            # 업데이트 완료 메시지와 재시작 안내
+            QMessageBox.information(self, "업데이트 완료", "업데이트가 완료되었습니다.\n프로그램이 재시작됩니다.")
             self.update_button.setEnabled(False)
+
+            # 프로그램을 종료하고 새 프로세스로 재시작
+            python = sys.executable
+            subprocess.Popen([python] + sys.argv)  # 새 프로세스로 실행
+            sys.exit(0)  # 현재 프로세스 종료
+
         except subprocess.CalledProcessError as e:
             error_message = f"업데이트 중 오류 발생:\n{traceback.format_exc()}\n\nCommand: {e.cmd}\nReturn code: {e.returncode}\nError output:\n{e.stderr}"
             QMessageBox.critical(self, "업데이트 오류", error_message)
         except Exception as e:
             error_message = f"업데이트 중 오류 발생:\n{traceback.format_exc()}"
             QMessageBox.critical(self, "업데이트 오류", error_message)
+
