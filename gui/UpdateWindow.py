@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageB
 import requests
 import subprocess
 import traceback  # traceback 모듈 추가
-
+import os
 
 class UpdateWindow(QDialog):
     def __init__(self, parent=None):
@@ -84,8 +84,8 @@ class UpdateWindow(QDialog):
     def perform_update(self):
         """업데이트를 수행하는 메서드"""
         try:
-            result = subprocess.run(["git", "pull"], capture_output=True, text=True,
-                                    cwd="C:\\Users\\CAD09\\Desktop\\projectMini")
+            project_dir = os.getcwd()  # 현재 작업 디렉터리
+            result = subprocess.run(["git", "pull"], capture_output=True, text=True, cwd=project_dir)
             QMessageBox.information(self, "업데이트 완료", "업데이트가 완료되었습니다.\n프로그램을 다시 시작해 주세요.")
             self.update_button.setEnabled(False)  # 업데이트 완료 후 버튼 비활성화
             print(result.stdout)
