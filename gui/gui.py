@@ -21,6 +21,7 @@ class FinancialApp(QWidget):
         # 메뉴바 추가
         menu_bar = QMenuBar(self)
         options_menu = menu_bar.addMenu("옵션")
+        update_menu = menu_bar.addMenu("업데이트")
 
         # 옵션 메뉴 액션 추가
         options_action = QAction("설정", self)
@@ -35,7 +36,7 @@ class FinancialApp(QWidget):
         # 업데이트 확인 메뉴 추가
         update_action = QAction("업데이트 확인", self)
         update_action.triggered.connect(self.open_update_window)
-        options_menu.addAction(update_action)
+        update_menu.addAction(update_action)
 
         # 레이아웃에 메뉴바 추가
         main_layout = QVBoxLayout(self)
