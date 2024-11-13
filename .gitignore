@@ -1,0 +1,3 @@
+# Exclude virtual environment and build output
+.venv/
+dist/

@@ -1,0 +1,16 @@
+- main.py                    # 애플리케이션 실행 파일, FinancialApp 시작점
+- gui/                       # GUI 관련 파일
+    - gui.py                 # 메인 UI를 관리하는 파일 (회사 목록 관리, 분석 실행 등)
+    - analysis_window.py     # 분석 결과 창 및 그래프 표시를 관리하는 파일
+    - options_window.py      # 옵션 창을 관리하는 파일 (사용자 설정, 경로 설정 등)
+- analysis/                  # 분석 및 시각화 관련 파일
+    - plotter.py             # Plotter 클래스 정의, 데이터 그래프 생성 및 시각화 관리
+- config/                    # 설정 관련 파일
+    - config_manager.py      # 설정 파일 관리, 설정 로드 및 저장
+    - config.py              # 설정 로직 구현, DEFAULT_CONFIG 정의 및 설정 데이터 처리
+    - config.json            # 설정 파일, 설정값 저장 (예: 경로 설정)
+    - item_condes.json
+- data/                      # 데이터 처리 및 로딩 관련 파일
+    - data_manager.py        # 데이터 관리, 데이터 로드 및 처리 함수
+    - data_loader.py         # 데이터 로딩, 데이터 파일 불러오기 로직 포함
+
