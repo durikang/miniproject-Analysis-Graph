@@ -1,11 +1,11 @@
 {
-    "income_data_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\IS",
-    "income_result_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\IS_graph",
-    "balance_data_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\BS",
-    "balance_result_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\BS_graph",
-    "png_save_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\PNG",
-    "csv_save_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\CSV",
-    "bs_raw_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\BS_raw",
-    "is_raw_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\datasets\\IS_raw",
-    "metadata_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\config\\metadata.json"
+    "income_data_path": "./new_path",
+    "income_result_path": "datasets/IS_graph",
+    "balance_data_path": "datasets/BS",
+    "balance_result_path": "datasets/BS_graph",
+    "png_save_path": "datasets/PNG",
+    "csv_save_path": "datasets/CSV",
+    "bs_raw_path": "datasets/BS_raw",
+    "is_raw_path": "datasets/IS_raw",
+    "metadata_path": "config/metadata.json"
 }
