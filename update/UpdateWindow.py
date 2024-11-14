@@ -1,10 +1,11 @@
-import json
+import glob
 import subprocess
 import os
 import sys
 import traceback
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox
 from config import config_manager
+from utils.logger import log_debug_message  # logger 모듈을 임포트
 
 class UpdateWindow(QDialog):
     def __init__(self, parent=None):
@@ -33,7 +34,7 @@ class UpdateWindow(QDialog):
 
         # 로컬 버전 로드
         self.local_version = self.load_local_version()
-        print(f"[DEBUG] 로드된 로컬 버전: {self.local_version}")  # 로컬 버전 출력
+        log_debug_message(f"로드된 로컬 버전: {self.local_version}")
 
     def load_local_version(self):
         """로컬 메타 데이터에서 버전 정보를 불러옵니다."""
@@ -43,7 +44,7 @@ class UpdateWindow(QDialog):
             self.current_version_label.setText(f"현재 버전: {version}")
             return version
         except Exception as e:
-            print("[DEBUG] Error loading local version:")
+            log_debug_message("Error loading local version:", e)
             traceback.print_exc()
             QMessageBox.critical(self, "오류", f"현재 버전을 불러오는 중 오류 발생: {e}")
             return None
@@ -57,7 +58,7 @@ class UpdateWindow(QDialog):
             fetch_result = subprocess.run(
                 ["git", "fetch", "--tags"], cwd=project_dir, check=True, capture_output=True, text=True
             )
-            print(f"[DEBUG] git fetch --tags 결과: {fetch_result.stdout}")
+            log_debug_message(f"git fetch --tags 결과: {fetch_result.stdout}")
 
             # Step 2: 최신 커밋 ID를 가져옵니다.
             rev_list_result = subprocess.run(
@@ -65,7 +66,7 @@ class UpdateWindow(QDialog):
                 cwd=project_dir, capture_output=True, text=True
             )
             latest_commit_id = rev_list_result.stdout.strip()
-            print(f"[DEBUG] 최신 커밋 ID: {latest_commit_id}")
+            log_debug_message(f"최신 커밋 ID: {latest_commit_id}")
 
             if not latest_commit_id:
                 raise ValueError("태그가 없습니다. 저장소에 태그를 추가하세요.")
@@ -76,12 +77,12 @@ class UpdateWindow(QDialog):
                 cwd=project_dir, capture_output=True, text=True
             )
             latest_tag = describe_result.stdout.strip()
-            print(f"[DEBUG] 로드된 최신 태그: {latest_tag}")
+            log_debug_message(f"로드된 최신 태그: {latest_tag}")
             self.latest_version_label.setText(f"최신 버전: {latest_tag}")
             return latest_tag
 
         except subprocess.CalledProcessError as e:
-            print("[DEBUG] Error fetching latest tag:")
+            log_debug_message("Error fetching latest tag:", e)
             traceback.print_exc()
             QMessageBox.critical(self, "오류", "원격 최신 버전 확인 실패")
             return None
@@ -89,15 +90,16 @@ class UpdateWindow(QDialog):
             QMessageBox.critical(self, "오류", str(e))
             return None
         except Exception as e:
-            print("[DEBUG] Unexpected error in get_latest_tag:")
+            log_debug_message("Unexpected error in get_latest_tag:", e)
             traceback.print_exc()
             QMessageBox.critical(self, "오류", f"태그를 가져오는 도중 오류 발생: {e}")
             return None
+
     def check_for_updates(self):
         """로컬 버전과 원격 버전을 비교하여 업데이트 필요 여부를 확인합니다."""
         try:
             latest_version = self.get_latest_tag()
-            print(f"[DEBUG] 체크 중인 최신 원격 버전: {latest_version}")  # 최신 원격 버전 출력
+            log_debug_message(f"체크 중인 최신 원격 버전: {latest_version}")
             if self.local_version and latest_version:
                 if self.local_version != latest_version:
                     self.update_button.setEnabled(True)
@@ -105,18 +107,17 @@ class UpdateWindow(QDialog):
                 else:
                     QMessageBox.information(self, "최신 상태", "프로그램이 최신 상태입니다.")
             else:
-                print("[DEBUG] Error in check_for_updates: 로컬 또는 원격 버전 정보를 확인할 수 없습니다.")
+                log_debug_message("Error in check_for_updates: 로컬 또는 원격 버전 정보를 확인할 수 없습니다.")
         except Exception as e:
-            print("[DEBUG] Error checking for updates:")
+            log_debug_message("Error checking for updates:", e)
             traceback.print_exc()
             QMessageBox.critical(self, "오류", f"업데이트 상태를 확인하는 중 오류 발생: {e}")
 
     def perform_update(self):
-        """특정 태그의 최신 파일을 로컬로 업데이트하고 프로그램을 재시작합니다."""
         try:
             latest_version = self.get_latest_tag()
             if latest_version is None:
-                print("[DEBUG] 최신 태그를 가져오지 못했습니다.")
+                log_debug_message("최신 태그를 가져오지 못했습니다.")
                 QMessageBox.critical(self, "업데이트 오류", "업데이트를 수행할 수 없습니다.")
                 return
 
@@ -124,36 +125,43 @@ class UpdateWindow(QDialog):
             subprocess.run(["git", "fetch", "--tags"], check=True)
             subprocess.run(["git", "checkout", f"tags/{latest_version}"], check=True)
 
-            # 빌드 실행 (예: pyinstaller 또는 다른 빌드 도구 사용)
+            # 빌드 실행
             build_result = subprocess.run(["pyinstaller", "--onefile", "main.py"], capture_output=True, text=True)
-            print("[DEBUG] 빌드 결과:", build_result.stdout)
+            log_debug_message("빌드 결과:", build_result.stdout)
 
-            # 기존 exe 파일 교체
-            target_exe = "dist/main.exe"  # 빌드된 exe 파일 위치
-            if os.path.exists(target_exe):
+            # dist 폴더 내 exe 파일 검색
+            dist_path = os.path.abspath("dist")
+            exe_files = glob.glob(os.path.join(dist_path, "*.exe"))
+
+            if exe_files:
+                target_exe = exe_files[0]  # 첫 번째 exe 파일을 선택 (여러 개가 있을 경우)
                 current_exe_path = os.path.abspath(sys.argv[0])
                 os.replace(target_exe, current_exe_path)
-                print(f"[DEBUG] {current_exe_path}가 성공적으로 업데이트되었습니다.")
+                log_debug_message(f"{current_exe_path}가 성공적으로 업데이트되었습니다.")
             else:
-                raise FileNotFoundError(f"{target_exe}가 존재하지 않습니다.")
+                raise FileNotFoundError(f"{dist_path} 폴더 내에 exe 파일이 존재하지 않습니다.")
 
-            # 로컬 메타데이터 버전 정보 업데이트
+            # 메타데이터 업데이트
             metadata = config_manager.load_metadata()
             metadata["version"] = latest_version
             config_manager.save_metadata(metadata)
 
             QMessageBox.information(self, "업데이트 완료", f"{latest_version} 버전으로 업데이트가 완료되었습니다.")
-            print(f"[DEBUG] {latest_version} 버전으로 업데이트 완료.")
+            log_debug_message(f"{latest_version} 버전으로 업데이트 완료.")
 
-            # 업데이트가 완료되었으므로 프로그램을 재시작
+            # 프로그램 재시작
             python = sys.executable
             os.execl(python, python, *sys.argv)
 
         except subprocess.CalledProcessError as e:
-            print("[DEBUG] Error during perform_update (git fetch or checkout failed):")
+            log_debug_message("Error during perform_update (git fetch or checkout failed):", e)
             traceback.print_exc()
             QMessageBox.critical(self, "업데이트 오류", f"업데이트 중 오류 발생: {e}")
+        except FileNotFoundError as e:
+            log_debug_message("Update failed due to missing file:", e)
+            traceback.print_exc()
+            QMessageBox.critical(self, "업데이트 오류", f"파일을 찾을 수 없습니다: {e}")
         except Exception as e:
-            print("[DEBUG] Unexpected error in perform_update:")
+            log_debug_message("Unexpected error in perform_update:", e)
             traceback.print_exc()
             QMessageBox.critical(self, "업데이트 오류", f"업데이트 중 예기치 않은 오류 발생: {e}")
