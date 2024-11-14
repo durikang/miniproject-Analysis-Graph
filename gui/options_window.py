@@ -1,6 +1,4 @@
-# options_window.py
-
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox
 from config import config_manager
 from .path_settings import PathSettings
 from .table_manager import TableManager
@@ -23,8 +21,13 @@ class OptionsWindow(QDialog):
 
             # 레이아웃 설정
             layout = QVBoxLayout(self)
+
+            # 경로 설정 UI 추가
             self.path_settings.add_path_settings(layout)
             self.path_settings.add_result_path_settings(layout)
+            self.path_settings.add_png_path_setting(layout)  # PNG 저장 경로 추가
+
+            # 테이블 설정 UI 추가
             self.table_manager.setup_tables(layout, self.item_codes)
 
             # 저장 버튼
@@ -41,7 +44,7 @@ class OptionsWindow(QDialog):
 
     def save_settings(self):
         try:
-            # 경로와 테이블 데이터 수집
+            # 모든 경로와 테이블 데이터 수집
             self.config_data.update(self.path_settings.get_paths())
             self.item_codes["INCOME_STATEMENT_ITEM_CODES"] = self.table_manager.extract_table_data(self.table_manager.income_table)
             self.item_codes["BALANCE_SHEET_ITEM_CODES"] = self.table_manager.extract_table_data(self.table_manager.balance_table)

@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QHBoxLayout,
-    QFileDialog, QListWidget, QListWidgetItem, QMessageBox, QMenuBar, QAction
+    QListWidget, QListWidgetItem, QMessageBox, QMenuBar, QAction
 )
 from PyQt5.QtCore import Qt  # Qt 모듈을 import
 from config import config_manager
@@ -9,7 +9,7 @@ from data import data_manager
 from gui.analysis_window import AnalysisWindow
 from gui.options_window import OptionsWindow
 from.CsvConvertWindow import CsvConvertWindow
-from.UpdateWindow import UpdateWindow
+from update.UpdateWindow import UpdateWindow
 
 
 class FinancialApp(QWidget):

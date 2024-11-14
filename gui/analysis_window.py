@@ -1,15 +1,12 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox, QMessageBox,
-    QHBoxLayout, QMenuBar, QAction, QDialog,QLineEdit , QFileDialog
+    QHBoxLayout, QMenuBar, QAction, QDialog, QFileDialog
 )
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl
 from analysis.plotter import Plotter, INCOME_STATEMENT_ITEM_CODES, BALANCE_SHEET_ITEM_CODES
 import pandas as pd
 from config import config_manager
-from gui.PngPathSettingsDialog import PngPathSettingsDialog
-
-
 
 class AnalysisWindow(QWidget):
     def __init__(self, income_statement_data, balance_sheet_data, company_list):
@@ -22,22 +19,15 @@ class AnalysisWindow(QWidget):
         # 창을 최대화 모드로 설정
         self.showMaximized()
 
-        # 메뉴바 생성 및 옵션 메뉴 추가
-        menu_bar = QMenuBar(self)
-        options_action = QAction("옵션", self)
-        options_action.triggered.connect(self.open_options_window)
-        menu_bar.addAction(options_action)
-
         # 메인 레이아웃 설정
         main_layout = QVBoxLayout(self)
-        main_layout.setMenuBar(menu_bar)
 
         # 회사 선택과 그래프를 표시할 상단 레이아웃
         top_layout = QVBoxLayout()
 
         # 회사 선택 라벨과 드롭다운 메뉴를 수평으로 배치하는 레이아웃
         company_selection_layout = QHBoxLayout()
-        company_selection_layout.addWidget(QLabel("회사 선택ㅋㅋ"))
+        company_selection_layout.addWidget(QLabel("회사 선택"))
 
         # 회사 선택 드롭다운 메뉴
         self.company_menu = QComboBox()
@@ -71,22 +61,6 @@ class AnalysisWindow(QWidget):
             main_layout.addWidget(button)
 
         self.setLayout(main_layout)
-
-    def open_options_window(self):
-        """PNG 저장 경로 설정 다이얼로그를 엽니다."""
-        dialog = PngPathSettingsDialog(self)
-        dialog.exec_()
-
-    def select_png_path(self, png_path_edit):
-        """경로 선택 창을 띄우고 선택한 경로를 입력 필드에 반영합니다."""
-        path = QFileDialog.getExistingDirectory(self, "PNG 저장 경로 선택")
-        if path:
-            png_path_edit.setText(path)
-
-    def save_png_path(self, path, dialog):
-        """설정된 경로를 JSON에 저장하고 다이얼로그를 닫습니다."""
-        config_manager.set_png_save_path(path)
-        dialog.accept()
 
     def display_graph(self, item_code, data_type):
         """선택된 항목과 데이터 종류에 따라 그래프를 생성하고 저장합니다."""
