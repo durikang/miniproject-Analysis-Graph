@@ -4,7 +4,7 @@ import os
 import sys
 import traceback
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox
-import config_manager
+from config import config_manager
 
 class UpdateWindow(QDialog):
     def __init__(self, parent=None):
@@ -112,7 +112,7 @@ class UpdateWindow(QDialog):
             QMessageBox.critical(self, "오류", f"업데이트 상태를 확인하는 중 오류 발생: {e}")
 
     def perform_update(self):
-        """특정 태그의 최신 파일을 로컬로 업데이트합니다."""
+        """특정 태그의 최신 파일을 로컬로 업데이트하고 프로그램을 재시작합니다."""
         try:
             latest_version = self.get_latest_tag()
 
@@ -132,6 +132,10 @@ class UpdateWindow(QDialog):
 
             QMessageBox.information(self, "업데이트 완료", f"{latest_version} 버전으로 업데이트가 완료되었습니다.")
             print(f"[DEBUG] {latest_version} 버전으로 업데이트 완료.")
+
+            # 업데이트가 완료되었으므로 프로그램을 재시작
+            python = sys.executable
+            os.execl(python, python, *sys.argv)  # 현재 프로세스를 종료하고 새로운 프로세스로 재시작
 
         except subprocess.CalledProcessError as e:
             print("[DEBUG] Error during perform_update (git fetch or checkout failed):")

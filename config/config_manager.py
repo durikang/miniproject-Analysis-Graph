@@ -54,7 +54,9 @@ def load_item_codes():
     """item_codes.json 파일을 로드하는 함수"""
     if os.path.exists(ITEM_CODES_FILE):
         with open(ITEM_CODES_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            print(f"[DEBUG] Loaded item codes: {data}")  # 데이터 확인을 위한 디버그 출력 추가
+            return data
     return {
         "INCOME_STATEMENT_ITEM_CODES": {},
         "BALANCE_SHEET_ITEM_CODES": {}

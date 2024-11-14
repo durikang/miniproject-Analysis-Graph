@@ -10,6 +10,9 @@ from gui.analysis_window import AnalysisWindow
 from gui.options_window import OptionsWindow
 from.CsvConvertWindow import CsvConvertWindow
 from update.UpdateWindow import UpdateWindow
+from analysis.save_analysis_results_as_csv import save_analysis_results_as_csv
+from analysis.plotter import Plotter  # Plotter를 추가로 가져옵니다.
+from utils.utils import open_folder  # utils 모듈에서 open_folder 함수를 가져옵니다.
 
 
 class FinancialApp(QWidget):
@@ -158,7 +161,7 @@ class FinancialApp(QWidget):
             self.company_list.addItem(item)
 
     def run_analysis(self):
-        """선택된 회사들에 대한 분석을 실행합니다."""
+        """선택된 회사들에 대한 분석을 실행하고 결과를 저장하며, 결과 폴더를 엽니다."""
         try:
             selected_companies = [self.selected_list.item(i).text() for i in range(self.selected_list.count())]
             if not selected_companies:
@@ -168,11 +171,48 @@ class FinancialApp(QWidget):
             balance_path = self.config.get("balance_data_path", "")
             income_path = self.config.get("income_data_path", "")
 
+            # 데이터 로드
             income_statement_data, balance_sheet_data = data_manager.prepare_data_for_analysis(
                 balance_path, income_path, selected_companies
             )
 
+            # JSON 파일에서 항목 코드와 명칭을 불러오기
+            item_codes = config_manager.load_item_codes()
+            INCOME_STATEMENT_ITEM_CODES = item_codes["INCOME_STATEMENT_ITEM_CODES"]
+            BALANCE_SHEET_ITEM_CODES = item_codes["BALANCE_SHEET_ITEM_CODES"]
+
+            # CSV 저장 기능 호출
+            save_analysis_results_as_csv(selected_companies, income_statement_data, balance_sheet_data)
+
+            # 각 회사와 항목에 대해 PNG 저장 기능 실행
+            for company in selected_companies:
+                for item_code, item_name in {**INCOME_STATEMENT_ITEM_CODES, **BALANCE_SHEET_ITEM_CODES}.items():
+                    try:
+                        # 데이터 타입에 따라 적절한 데이터프레임 선택
+                        data = income_statement_data if item_code in INCOME_STATEMENT_ITEM_CODES else balance_sheet_data
+
+                        # Plotter 인스턴스를 생성하여 그래프 생성 및 PNG 저장
+                        plotter = Plotter(company, data)
+                        fig = plotter.create_graph(item_code, item_name)
+
+                        # PNG 파일로 저장
+                        plotter.save_graph_as_png(fig, item_code,
+                                                  "손익계산서" if item_code in INCOME_STATEMENT_ITEM_CODES else "재무상태표")
+
+                    except ValueError as ve:
+                        print(
+                            f"[Warning] Skipping item '{item_name}' for company '{company}' due to missing data: {ve}")
+                        continue  # 데이터가 없는 경우 해당 항목을 생략하고 다음 항목으로 넘어갑니다
+
+            # 분석 창 열기
             self.open_analysis_window(income_statement_data, balance_sheet_data)
+
+            # 저장 폴더 열기
+            csv_save_path = config_manager.get_csv_save_path()
+            png_save_path = config_manager.get_png_save_path()
+            open_folder(csv_save_path)
+            open_folder(png_save_path)
+
         except Exception as e:
             print(f"분석 실행 중 오류 발생: {e}")
             QMessageBox.critical(self, "오류", f"분석 실행 중 오류 발생: {e}")

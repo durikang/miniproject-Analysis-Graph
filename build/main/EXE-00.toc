@@ -63,7 +63,7 @@
  [],
  False,
  False,
- 1731550998,
+ 1731553026,
  [('runw.exe',
    'C:\\Users\\CAD09\\Desktop\\projectMini\\.venv\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit\\runw.exe',
    'EXECUTABLE')])

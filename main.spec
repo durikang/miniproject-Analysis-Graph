@@ -8,7 +8,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('config/config.json', 'config'), ('config/item_codes.json', 'config'), ('config/metadata.json', 'config'), ('datasets/BS/.keep', 'datasets/BS'), ('datasets/IS/.keep', 'datasets/IS'), ('datasets/BS_graph/.keep', 'datasets/BS_graph'), ('datasets/IS_graph/.keep', 'datasets/IS_graph'), ('datasets/BS_raw/.keep', 'datasets/BS_raw'), ('datasets/IS_raw/.keep', 'datasets/IS_raw'), ('datasets/PNG/.keep', 'datasets/PNG')],
+    datas=[('config', 'config'), ('datasets/BS/.keep', 'datasets/BS'), ('datasets/IS/.keep', 'datasets/IS'), ('datasets/BS_graph/.keep', 'datasets/BS_graph'), ('datasets/IS_graph/.keep', 'datasets/IS_graph'), ('datasets/BS_raw/.keep', 'datasets/BS_raw'), ('datasets/IS_raw/.keep', 'datasets/IS_raw'), ('datasets/PNG/.keep', 'datasets/PNG')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
