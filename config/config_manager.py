@@ -1,7 +1,6 @@
-import json
 import os
+import json
 import sys
-from . import config
 
 CONFIG_FILE = "config/config.json"
 
@@ -16,59 +15,67 @@ DEFAULT_CONFIG = {
     "bs_raw_path": "./datasets/BS_raw",
     "is_raw_path": "./datasets/IS_raw"
 }
-config_data = config.load_config()
 
 # PyInstaller에서의 임시 디렉토리 경로 설정
-base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+def get_base_path():
+    """실행 파일의 위치를 기준으로 경로를 설정"""
+    if getattr(sys, 'frozen', False):
+        # PyInstaller로 패키징된 경우
+        return sys._MEIPASS
+    return os.path.abspath(".")
+
+base_path = get_base_path()
+CONFIG_FILE_PATH = os.path.join(base_path, CONFIG_FILE)
 ITEM_CODES_FILE = os.path.join(base_path, "config", "item_codes.json")
+METADATA_FILE_PATH = os.path.join(base_path, "config", "metadata.json")
+
+def load_config():
+    """config.json 파일에서 설정을 불러와 기본 설정값과 병합"""
+    config = DEFAULT_CONFIG.copy()
+    if os.path.exists(CONFIG_FILE_PATH):
+        with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+            config.update(json.load(f))
+
+    # 상대 경로일 경우에만 실행 파일 기준 절대 경로로 변환
+    for key in DEFAULT_CONFIG:
+        if config[key].startswith("./"):
+            config[key] = os.path.abspath(os.path.join(get_base_path(), config[key]))
+
+    return config
+
+# 전역 설정 데이터 로드
+config_data = load_config()
+
+def save_config(config_data):
+    with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
+        json.dump(config_data, f, ensure_ascii=False, indent=4)
 
 def load_item_codes():
     """item_codes.json 파일을 로드하는 함수"""
     if os.path.exists(ITEM_CODES_FILE):
         with open(ITEM_CODES_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    else:
-        # 파일이 없는 경우 기본 구조 반환
-        return {
-            "INCOME_STATEMENT_ITEM_CODES": {},
-            "BALANCE_SHEET_ITEM_CODES": {}
-        }
+    return {
+        "INCOME_STATEMENT_ITEM_CODES": {},
+        "BALANCE_SHEET_ITEM_CODES": {}
+    }
 
 def save_item_codes(data):
     """item_codes.json 파일에 데이터를 저장하는 함수"""
     with open(ITEM_CODES_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
+def load_metadata():
+    """metadata.json 파일을 로드하는 함수"""
+    if os.path.exists(METADATA_FILE_PATH):
+        with open(METADATA_FILE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"version": "unknown"}
 
-# 실행 파일의 위치를 기준으로 기본 경로를 설정하는 함수
-def get_base_path():
-    """실행 파일의 위치를 기준으로 경로를 설정"""
-    return getattr(sys, '_MEIPASS', os.path.abspath("."))
-
-# config.json 파일의 경로를 동적으로 불러오기
-CONFIG_FILE_PATH = os.path.join(get_base_path(), "config", "config.json")
-
-# 경로 설정을 불러오는 함수
-def load_config():
-    config = DEFAULT_CONFIG.copy()
-    config_path = os.path.join(get_base_path(), CONFIG_FILE)  # 실행 경로 기준 설정 파일 경로 지정
-
-    if os.path.exists(config_path):
-        with open(config_path, "r", encoding="utf-8") as f:
-            config.update(json.load(f))
-
-    # 실행 파일 위치를 기준으로 동적 경로 설정
-    for key in DEFAULT_CONFIG:
-        # 상대 경로일 경우에만 실행 파일 기준 절대 경로로 변환
-        if config[key].startswith("./"):
-            config[key] = os.path.abspath(os.path.join(get_base_path(), config[key]))
-
-    return config
-
-def save_config(config_data):
-    config_path = os.path.join(get_base_path(), CONFIG_FILE)
-    with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(config_data, f, ensure_ascii=False, indent=4)
+def save_metadata(data):
+    """metadata.json 파일에 데이터를 저장하는 함수"""
+    with open(METADATA_FILE_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
 # 경로 설정 관련 메서드
 def get_income_data_path():
@@ -76,60 +83,56 @@ def get_income_data_path():
 
 def set_income_data_path(path):
     config_data["income_data_path"] = path
-    save_config()
+    save_config(config_data)
 
 def get_balance_data_path():
     return config_data["balance_data_path"]
 
 def set_balance_data_path(path):
     config_data["balance_data_path"] = path
-    save_config()
+    save_config(config_data)
 
 def get_income_result_path():
     return config_data["income_result_path"]
 
 def set_income_result_path(path):
     config_data["income_result_path"] = path
-    save_config()
+    save_config(config_data)
 
 def get_balance_result_path():
     return config_data["balance_result_path"]
 
 def set_balance_result_path(path):
     config_data["balance_result_path"] = path
-    save_config()
+    save_config(config_data)
 
 # png 경로 가져오기
 def get_png_save_path():
     return config_data.get("png_save_path", "datasets/PNG")
 
 def set_png_save_path(path):
-    """PNG 저장 경로를 설정하고 JSON 파일에 저장합니다."""
-    config = load_config()
-    config["png_save_path"] = path
-    save_config(config)
+    config_data["png_save_path"] = path
+    save_config(config_data)
 
 # csv 경로 가져오기
 def get_csv_save_path():
-    return config_data.get("csv_save_path", "datasets/CSV")  # CSV 기본 경로
+    return config_data.get("csv_save_path", "datasets/CSV")
 
 def set_csv_save_path(path):
-    """CSV 저장 경로를 설정하고 JSON 파일에 저장합니다."""
-    config = load_config()
-    config["csv_save_path"] = path
-    save_config(config)
+    config_data["csv_save_path"] = path
+    save_config(config_data)
 
 # 항목 코드 설정 관련 메서드
 def get_income_statement_item_codes():
-    return config_data["income_statement_item_codes"]
+    return config_data.get("income_statement_item_codes", {})
 
 def set_income_statement_item_codes(new_codes):
     config_data["income_statement_item_codes"] = new_codes
-    save_config()
+    save_config(config_data)
 
 def get_balance_sheet_item_codes():
-    return config_data["balance_sheet_item_codes"]
+    return config_data.get("balance_sheet_item_codes", {})
 
 def set_balance_sheet_item_codes(new_codes):
     config_data["balance_sheet_item_codes"] = new_codes
-    save_config()
+    save_config(config_data)
