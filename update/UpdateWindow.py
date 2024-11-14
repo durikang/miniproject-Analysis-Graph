@@ -115,7 +115,6 @@ class UpdateWindow(QDialog):
         """특정 태그의 최신 파일을 로컬로 업데이트하고 프로그램을 재시작합니다."""
         try:
             latest_version = self.get_latest_tag()
-
             if latest_version is None:
                 print("[DEBUG] 최신 태그를 가져오지 못했습니다.")
                 QMessageBox.critical(self, "업데이트 오류", "업데이트를 수행할 수 없습니다.")
@@ -124,6 +123,19 @@ class UpdateWindow(QDialog):
             # 최신 태그로 체크아웃
             subprocess.run(["git", "fetch", "--tags"], check=True)
             subprocess.run(["git", "checkout", f"tags/{latest_version}"], check=True)
+
+            # 빌드 실행 (예: pyinstaller 또는 다른 빌드 도구 사용)
+            build_result = subprocess.run(["pyinstaller", "--onefile", "main.py"], capture_output=True, text=True)
+            print("[DEBUG] 빌드 결과:", build_result.stdout)
+
+            # 기존 exe 파일 교체
+            target_exe = "dist/main.exe"  # 빌드된 exe 파일 위치
+            if os.path.exists(target_exe):
+                current_exe_path = os.path.abspath(sys.argv[0])
+                os.replace(target_exe, current_exe_path)
+                print(f"[DEBUG] {current_exe_path}가 성공적으로 업데이트되었습니다.")
+            else:
+                raise FileNotFoundError(f"{target_exe}가 존재하지 않습니다.")
 
             # 로컬 메타데이터 버전 정보 업데이트
             metadata = config_manager.load_metadata()
@@ -135,7 +147,7 @@ class UpdateWindow(QDialog):
 
             # 업데이트가 완료되었으므로 프로그램을 재시작
             python = sys.executable
-            os.execl(python, python, *sys.argv)  # 현재 프로세스를 종료하고 새로운 프로세스로 재시작
+            os.execl(python, python, *sys.argv)
 
         except subprocess.CalledProcessError as e:
             print("[DEBUG] Error during perform_update (git fetch or checkout failed):")
