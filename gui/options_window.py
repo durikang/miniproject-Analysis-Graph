@@ -26,6 +26,7 @@ class OptionsWindow(QDialog):
             self.path_settings.add_path_settings(layout)
             self.path_settings.add_result_path_settings(layout)
             self.path_settings.add_png_path_setting(layout)  # PNG 저장 경로 추가
+            self.path_settings.add_csv_path_setting(layout)  # CSV 저장 경로 추가
 
             # 테이블 설정 UI 추가
             self.table_manager.setup_tables(layout, self.item_codes)
