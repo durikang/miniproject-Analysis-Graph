@@ -1,5 +1,6 @@
 import glob
 import platform
+import shutil  # shutil 모듈 임포트
 import subprocess
 import os
 import sys
@@ -118,35 +119,42 @@ class UpdateWindow(QDialog):
                 QMessageBox.critical(self, "업데이트 오류", "업데이트를 수행할 수 없습니다.")
                 return
 
+            # 최신 태그로 체크아웃
             subprocess.run(["git", "fetch", "--tags"], check=True)
             subprocess.run(["git", "checkout", f"tags/{latest_version}"], check=True)
 
             # 빌드 실행
-            if platform.system() == "Windows" and getattr(sys, 'frozen', False):
-                # 빌드된 .exe 환경에서 실행 시
-                build_result = subprocess.run(["pyinstaller", "--onefile", "main.py"], stdout=subprocess.PIPE,
-                                              stderr=subprocess.PIPE, text=True)
-                log_debug_message(f"빌드 결과: {build_result.stdout}")
+            build_result = subprocess.run(["pyinstaller", "--onefile", "main.py"], stdout=subprocess.PIPE,
+                                          stderr=subprocess.PIPE, text=True)
+            log_debug_message(f"빌드 결과: {build_result.stdout}")
 
-                if build_result.returncode != 0:
-                    log_debug_message(f"빌드 실패: {build_result.stderr}")
-                    QMessageBox.critical(self, "업데이트 오류", "업데이트 중 빌드에 실패했습니다.")
-                    return
+            if build_result.returncode != 0:
+                log_debug_message(f"빌드 실패: {build_result.stderr}")
+                QMessageBox.critical(self, "업데이트 오류", "업데이트 중 빌드에 실패했습니다.")
+                return
+
+            # dist/main 폴더 및 dist 폴더 내 exe 파일 경로 확인
+            dist_paths = ["dist/main", "dist"]
+            for path in dist_paths:
+                full_path = os.path.abspath(path)
+                log_debug_message(f"찾고자 하는 경로: {full_path}")  # 경로 출력
+
+                exe_files = glob.glob(os.path.join(full_path, "*.exe"))
+                if exe_files:
+                    log_debug_message(f"{full_path}에서 발견된 .exe 파일: {exe_files[0]}")
+                    target_exe = exe_files[0]
+                    current_exe_path = os.path.abspath(sys.argv[0])
+
+                    if target_exe != current_exe_path:
+                        shutil.copyfile(target_exe, current_exe_path)
+                        log_debug_message(f"{current_exe_path}가 성공적으로 업데이트되었습니다.")
+                    else:
+                        log_debug_message("업데이트된 파일과 현재 파일이 동일합니다.")
+                    break
             else:
-                log_debug_message("개발 환경에서 실행 중: 빌드 프로세스를 건너뜁니다.")
+                raise FileNotFoundError(f"{dist_paths} 폴더 내에 exe 파일이 존재하지 않습니다.")
 
-            # dist 폴더 내 exe 파일 검색
-            dist_path = os.path.join(os.path.abspath("dist"), "main")  # dist/main 폴더 지정
-            exe_files = glob.glob(os.path.join(dist_path, "*.exe"))  # main 폴더 내 exe 파일 검색
-
-            if exe_files:
-                target_exe = exe_files[0]
-                current_exe_path = os.path.abspath(sys.argv[0])
-                os.replace(target_exe, current_exe_path)
-                log_debug_message(f"{current_exe_path}가 성공적으로 업데이트되었습니다.")
-            else:
-                raise FileNotFoundError(f"{dist_path} 폴더 내에 exe 파일이 존재하지 않습니다.")
-
+            # 메타데이터 업데이트
             metadata = config_manager.load_metadata()
             metadata["version"] = latest_version
             config_manager.save_metadata(metadata)
@@ -154,6 +162,7 @@ class UpdateWindow(QDialog):
             QMessageBox.information(self, "업데이트 완료", f"{latest_version} 버전으로 업데이트가 완료되었습니다.")
             log_debug_message(f"{latest_version} 버전으로 업데이트 완료.")
 
+            # 프로그램 재시작
             python = sys.executable
             subprocess.Popen([python, *sys.argv])
             sys.exit()
