@@ -1,5 +1,3 @@
-# path_settings.py
-
 from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QHBoxLayout, QFileDialog
 
 class PathSettings:
@@ -8,7 +6,8 @@ class PathSettings:
         self.balance_data_path = QLineEdit(config_data.get("balance_data_path", ""))
         self.income_result_path = QLineEdit(config_data.get("income_result_path", ""))
         self.balance_result_path = QLineEdit(config_data.get("balance_result_path", ""))
-        self.png_save_path = QLineEdit(config_data.get("png_save_path", ""))  # png 경로 추가
+        self.png_save_path = QLineEdit(config_data.get("png_save_path", ""))  # PNG 경로 추가
+        self.csv_save_path = QLineEdit(config_data.get("csv_save_path", ""))  # CSV 경로 추가
 
     def add_path_settings(self, layout):
         layout.addWidget(QLabel("손익계산서 데이터 경로"))
@@ -36,10 +35,14 @@ class PathSettings:
         png_layout.addWidget(png_path_button)
         layout.addLayout(png_layout)
 
-    def select_png_save_path(self):
-        path = QFileDialog.getExistingDirectory(None, "PNG 그래프 저장 경로 선택")
-        if path:
-            self.png_save_path.setText(path)
+    def add_csv_path_setting(self, layout):
+        layout.addWidget(QLabel("CSV 저장 경로"))
+        csv_path_button = QPushButton("경로 선택")
+        csv_path_button.clicked.connect(self.select_csv_save_path)
+        csv_layout = QHBoxLayout()
+        csv_layout.addWidget(self.csv_save_path)
+        csv_layout.addWidget(csv_path_button)
+        layout.addLayout(csv_layout)
 
     def add_result_path_settings(self, layout):
         layout.addWidget(QLabel("손익계산서 그래프 저장 경로"))
@@ -78,11 +81,22 @@ class PathSettings:
         if path:
             self.balance_result_path.setText(path)
 
+    def select_png_save_path(self):
+        path = QFileDialog.getExistingDirectory(None, "PNG 그래프 저장 경로 선택")
+        if path:
+            self.png_save_path.setText(path)
+
+    def select_csv_save_path(self):
+        path = QFileDialog.getExistingDirectory(None, "CSV 저장 경로 선택")
+        if path:
+            self.csv_save_path.setText(path)
+
     def get_paths(self):
         return {
             "income_data_path": self.income_data_path.text(),
             "balance_data_path": self.balance_data_path.text(),
             "income_result_path": self.income_result_path.text(),
             "balance_result_path": self.balance_result_path.text(),
-            "png_save_path": self.png_save_path.text()  # png 경로 추가
+            "png_save_path": self.png_save_path.text(),  # PNG 경로
+            "csv_save_path": self.csv_save_path.text()   # CSV 경로 추가
         }

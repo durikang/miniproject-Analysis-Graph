@@ -1,5 +1,3 @@
-# config_manager.py
-
 import json
 import os
 import sys
@@ -14,6 +12,7 @@ DEFAULT_CONFIG = {
     "balance_data_path": "./datasets/BS",
     "balance_result_path": "./datasets/BS_graph",
     "png_save_path": "./datasets/PNG",
+    "csv_save_path": "./datasets/CSV",  # CSV 저장 경로 추가
     "bs_raw_path": "./datasets/BS_raw",
     "is_raw_path": "./datasets/IS_raw"
 }
@@ -96,6 +95,10 @@ def set_income_result_path(path):
 def get_balance_result_path():
     return config_data["balance_result_path"]
 
+def set_balance_result_path(path):
+    config_data["balance_result_path"] = path
+    save_config()
+
 # png 경로 가져오기
 def get_png_save_path():
     return config_data.get("png_save_path", "datasets/PNG")
@@ -106,10 +109,15 @@ def set_png_save_path(path):
     config["png_save_path"] = path
     save_config(config)
 
+# csv 경로 가져오기
+def get_csv_save_path():
+    return config_data.get("csv_save_path", "datasets/CSV")  # CSV 기본 경로
 
-def set_balance_result_path(path):
-    config_data["balance_result_path"] = path
-    save_config()
+def set_csv_save_path(path):
+    """CSV 저장 경로를 설정하고 JSON 파일에 저장합니다."""
+    config = load_config()
+    config["csv_save_path"] = path
+    save_config(config)
 
 # 항목 코드 설정 관련 메서드
 def get_income_statement_item_codes():

@@ -1,15 +1,12 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox, QMessageBox,
-    QHBoxLayout, QMenuBar, QAction, QDialog,QLineEdit , QFileDialog
+    QHBoxLayout, QMenuBar, QAction, QDialog, QFileDialog
 )
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl
 from analysis.plotter import Plotter, INCOME_STATEMENT_ITEM_CODES, BALANCE_SHEET_ITEM_CODES
 import pandas as pd
 from config import config_manager
-from gui.CsvPngPathSettingsDialog import CsvPngPathSettingsDialog  # 새로운 클래스 파일을 import
-
-
 
 class AnalysisWindow(QWidget):
     def __init__(self, income_statement_data, balance_sheet_data, company_list):
@@ -22,15 +19,8 @@ class AnalysisWindow(QWidget):
         # 창을 최대화 모드로 설정
         self.showMaximized()
 
-        # 메뉴바 생성 및 옵션 메뉴 추가
-        menu_bar = QMenuBar(self)
-        options_action = QAction("옵션", self)
-        options_action.triggered.connect(self.open_options_window)
-        menu_bar.addAction(options_action)
-
         # 메인 레이아웃 설정
         main_layout = QVBoxLayout(self)
-        main_layout.setMenuBar(menu_bar)
 
         # 회사 선택과 그래프를 표시할 상단 레이아웃
         top_layout = QVBoxLayout()
@@ -70,32 +60,10 @@ class AnalysisWindow(QWidget):
             button.clicked.connect(lambda _, c=code: self.display_graph(c, "재무상태표"))
             main_layout.addWidget(button)
 
-        # CSV 저장 버튼 추가
-        csv_save_button = QPushButton("CSV 저장")
-        csv_save_button.clicked.connect(self.save_csv)
-        main_layout.addWidget(csv_save_button)
-
         self.setLayout(main_layout)
-
-    def open_options_window(self):
-        """저장 경로 설정 다이얼로그를 엽니다."""
-        dialog = CsvPngPathSettingsDialog(self)
-        dialog.exec_()
-
-    def select_png_path(self, png_path_edit):
-        """경로 선택 창을 띄우고 선택한 경로를 입력 필드에 반영합니다."""
-        path = QFileDialog.getExistingDirectory(self, "PNG 저장 경로 선택")
-        if path:
-            png_path_edit.setText(path)
-
-    def save_png_path(self, path, dialog):
-        """설정된 경로를 JSON에 저장하고 다이얼로그를 닫습니다."""
-        config_manager.set_png_save_path(path)
-        dialog.accept()
 
     def display_graph(self, item_code, data_type):
         """선택된 항목과 데이터 종류에 따라 그래프를 생성하고 저장합니다."""
-        self.current_data_type = data_type  # 현재 데이터 타입 추적
         company = self.company_menu.currentText()
         print(f"[Info] Displaying graph for company: {company}, item: {item_code} ({data_type})")
 
@@ -150,67 +118,3 @@ class AnalysisWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "오류", f"예기치 못한 오류 발생: {e}")
             print(f"[Error - Graph Creation - Unexpected]: {e}")
-
-    def save_csv(self):
-        """선택된 회사 및 항목에 대한 데이터를 CSV 파일로 저장합니다."""
-        company = self.company_menu.currentText()
-        data_type = "손익계산서" if self.sender().text() == "손익계산서 항목" else "재무상태표"
-
-        try:
-            # 데이터 타입에 따라 적절한 데이터 선택 및 항목코드 목록 가져오기
-            if data_type == "손익계산서":
-                data = self.income_statement_data
-                item_codes = list(INCOME_STATEMENT_ITEM_CODES.keys())
-            elif data_type == "재무상태표":
-                data = self.balance_sheet_data
-                item_codes = list(BALANCE_SHEET_ITEM_CODES.keys())
-            else:
-                raise ValueError("올바르지 않은 데이터 종류입니다.")
-
-            # 회사와 항목코드 필터링
-            filtered_data = data[(data['회사명'] == company) & (data['항목코드'].isin(item_codes))]
-            if filtered_data.empty:
-                raise ValueError(f"선택된 회사 '{company}'에 대한 데이터가 없습니다.")
-
-            # 필요한 열만 선택 (회사명, 항목코드, 항목명, 당기 데이터를 연도별로)
-            filtered_data = filtered_data[['회사명', '항목코드', '항목명', '연도', '당기']]
-
-            # 항목코드를 한글 항목명으로 변경
-            filtered_data['항목명'] = filtered_data['항목코드'].map(
-                {**INCOME_STATEMENT_ITEM_CODES, **BALANCE_SHEET_ITEM_CODES}
-            ).fillna(filtered_data['항목명'])
-
-            # 피벗 테이블 형태로 데이터 변환: 연도를 열로 변환하여 각 항목에 대해 연도별 데이터를 표현
-            pivoted_data = filtered_data.pivot_table(
-                index=['회사명', '항목코드', '항목명'],
-                columns='연도',
-                values='당기',
-                aggfunc='first'
-            ).reset_index()
-
-            # 열 이름 수정: 연도별 열의 이름을 문자열로 변경
-            pivoted_data.columns.name = None  # 기존 MultiIndex의 이름 제거
-            pivoted_data = pivoted_data.rename(columns=lambda x: str(x) if isinstance(x, int) else x)
-
-            # 파일 저장 경로 선택
-            file_path, _ = QFileDialog.getSaveFileName(self, "CSV 파일로 저장", f"{company}_data.csv", "CSV Files (*.csv)")
-            if file_path:
-                pivoted_data.to_csv(file_path, index=False, encoding='utf-8-sig')
-                QMessageBox.information(self, "저장 완료", f"CSV 파일이 저장되었습니다: {file_path}")
-
-        except ValueError as e:
-            QMessageBox.critical(self, "오류", str(e))
-        except Exception as e:
-            QMessageBox.critical(self, "오류", f"CSV 파일 저장 중 오류가 발생했습니다: {e}")
-            print(f"[Error - CSV Save]: {e}")
-
-    def get_data_type(self):
-        """사용자가 선택한 데이터 타입을 반환합니다. ('손익계산서' 또는 '재무상태표')"""
-        # 이 부분에서 사용자가 현재 어떤 데이터를 선택했는지 확인하는 로직이 필요합니다.
-        # 예를 들어, '손익계산서' 또는 '재무상태표' 중에서 현재 활성화된 상태를 추적해야 합니다.
-        # 이를 위해 클래스 변수나 UI 컴포넌트에서 현재 선택된 상태를 읽어와서 반환해야 합니다.
-        # 간단한 구현 예:
-        if hasattr(self, 'current_data_type'):
-            return self.current_data_type
-        return None
-
