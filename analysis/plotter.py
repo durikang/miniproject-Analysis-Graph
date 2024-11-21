@@ -2,6 +2,7 @@ import json
 import plotly.graph_objects as go
 import os
 from sklearn.linear_model import LinearRegression
+import numpy as np
 import pandas as pd
 from config import config_manager  # config_manager 추가
 
@@ -37,33 +38,22 @@ class Plotter:
             # 2019년부터 2023년까지의 연도를 모두 포함하도록 설정
             full_years = pd.DataFrame({'연도': range(2019, 2024)})
             filtered_data = pd.merge(full_years, filtered_data, on="연도", how="left")
-
-            # 결측값을 선형 보간으로 채우기
             filtered_data['당기'] = filtered_data['당기'].interpolate(method='linear')
 
-            # 디버깅용 필터링된 데이터 출력
-            pd.set_option('display.max_rows', None)
-            pd.set_option('display.max_columns', None)
-            pd.set_option('display.expand_frame_repr', False)
             print(f"[Debug] Filtered and interpolated data for company '{self.company_name}' with item '{item_name_kr}':\n{filtered_data}")
-            pd.reset_option('display.max_rows')
-            pd.reset_option('display.max_columns')
-            pd.reset_option('display.expand_frame_repr')
 
-            years = filtered_data["연도"].values.reshape(-1, 1)
+            years = filtered_data["연도"].values
             values = filtered_data["당기"].values / 1e8  # 백만원 단위로 변환
 
-            # 선형 회귀 모델을 통해 2024년 예측
-            model = LinearRegression()
-            model.fit(years, values)
-            predicted_value = model.predict([[2024]])[0]
+            # 분리된 예측 함수 호출
+            predicted_value = self.predict_with_linear_regression(years, values, [[2024]])
 
             # 그래프 생성
             fig = go.Figure()
 
             # 기존 데이터 표시
             fig.add_trace(go.Scatter(
-                x=years.flatten(), y=values, mode="lines+markers", name=f"{item_name_kr}",
+                x=years, y=values, mode="lines+markers", name=f"{item_name_kr}",
                 line=dict(color="blue")
             ))
 
@@ -81,7 +71,7 @@ class Plotter:
                 ),
                 xaxis_title="연도",
                 yaxis_title="값 (백만원 단위)",
-                yaxis_tickformat=",.0f",  # y축 단위 변경 (백만원 단위, 쉼표 추가)
+                yaxis_tickformat=",.0f",
                 width=800,
                 height=600,
                 margin=dict(l=50, r=50, t=50, b=50)
@@ -158,4 +148,37 @@ class Plotter:
 
         except Exception as e:
             print(f"[Unexpected Error - File Save]: {e}")
+            raise
+
+    @staticmethod
+    def predict_with_linear_regression(years, values, target_year):
+        """
+        주어진 데이터로 선형 회귀 모델을 학습하고 target_year에 대한 값을 예측합니다.
+        :param years: 연도 데이터 (1차원 또는 2차원 배열)
+        :param values: 값 데이터 (1차원 배열, 문자열로 되어 있을 경우에도 처리 가능)
+        :param target_year: 예측할 연도 (정수 또는 2D 배열)
+        :return: target_year에 대한 예측 값
+        """
+        try:
+            # 데이터를 2차원 배열로 변환
+            years = np.array(years).reshape(-1, 1)
+
+            # values가 문자열일 경우 전처리 (쉼표 제거 및 float 변환)
+            if values.dtype == 'object':  # numpy 배열에서 문자열 타입 확인
+                values = np.char.replace(values.astype(str), ',', '').astype(float)
+
+            # target_year이 정수로 들어왔을 경우 2D 배열로 변환
+            if isinstance(target_year, int):
+                target_year = np.array([[target_year]])
+
+            # 선형 회귀 모델 학습
+            model = LinearRegression()
+            model.fit(years, values)
+
+            # target_year 예측
+            predicted_value = model.predict(target_year)[0]  # target_year는 2D 배열이어야 함
+            return predicted_value
+
+        except Exception as e:
+            print(f"[Error - Prediction]: {e}")
             raise
