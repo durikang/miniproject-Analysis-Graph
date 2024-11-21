@@ -112,11 +112,14 @@ class CsvConvertWindow(QDialog):
             return
 
         try:
+            # 예상 필드 개수 설정 (여기서 11로 예를 듦)
+            expected_fields = 11
+
             # TxtToCsvConverter 생성 및 실행
-            converter = TxtToCsvConverter(bs_raw_path, is_raw_path, bs_output_path, is_output_path)
+            converter = TxtToCsvConverter(bs_raw_path, is_raw_path, bs_output_path, is_output_path, expected_fields)
             total_files = (
-                len(converter._get_txt_files(bs_raw_path)) +
-                len(converter._get_txt_files(is_raw_path))
+                    len(converter._get_txt_files(bs_raw_path)) +
+                    len(converter._get_txt_files(is_raw_path))
             )
             self.progress_bar.setMaximum(total_files)
 
@@ -132,3 +135,4 @@ class CsvConvertWindow(QDialog):
             print(f"[TRACE][ERROR] CSV conversion failed: {str(e)}")
             traceback.print_exc()
             QMessageBox.critical(self, "오류", f"변환 중 오류 발생: {str(e)}")
+

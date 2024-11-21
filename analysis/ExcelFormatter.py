@@ -98,7 +98,7 @@ class ExcelFormatter:
             (f"K{start_row + 1}:W{start_row + 2}", "재무상태표"),
             (f"K{start_row + 3}:P{start_row + 3}", "부채비율"), (f"R{start_row + 3}:W{start_row + 3}", "유동비율"),
             (f"Y{start_row + 1}:AR{start_row + 2}", "당기순이익"), (f"Y{start_row + 3}:AD{start_row + 3}", "당기순이익"),
-            (f"AF{start_row + 3}:AK{start_row + 3}", "당기순이익"), (f"AM{start_row + 3}:AR{start_row + 3}", "영업이익")
+            (f"AF{start_row + 3}:AK{start_row + 3}", "매출원가"), (f"AM{start_row + 3}:AR{start_row + 3}", "영업이익")
         ]
         self.merge_cells_and_set_text(merge_and_set)
 

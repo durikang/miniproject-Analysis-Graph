@@ -26,11 +26,15 @@ class Plotter:
             filtered_data = self.data[(self.data['회사명'] == self.company_name) &
                                       (self.data['항목코드'] == item_code)][['연도', '당기']]
 
+            # 매출원가가 없으면 계산
+            if filtered_data.empty and item_code == "ifrs-full_CostOfSales":
+                filtered_data = self._calculate_cost_of_sales()
+
+            # 데이터가 여전히 없으면 예외 처리
             if filtered_data.empty:
-                print(f"[Debug] No data found for company '{self.company_name}' with item '{item_name_kr}'.")
                 raise ValueError(f"{self.company_name}에 대한 {item_name_kr} 데이터가 존재하지 않습니다.")
 
-            # 데이터 형식 변환 및 결측값 처리
+            # 데이터 전처리
             filtered_data['당기'] = filtered_data['당기'].astype(str).str.replace(',', '').astype(float)
             filtered_data.sort_values(by="연도", inplace=True)
 
@@ -40,12 +44,12 @@ class Plotter:
             filtered_data['당기'] = filtered_data['당기'].interpolate(method='linear')
 
             # 디버깅용 출력
-            print(f"[Debug] Filtered and interpolated data for company '{self.company_name}' with item '{item_name_kr}':\n{filtered_data}")
+            print(f"[Debug] Filtered and interpolated data for {item_name_kr}:\n{filtered_data}")
 
             years = filtered_data["연도"].values
             values = filtered_data["당기"].values / 1e8  # 백만원 단위로 변환
 
-            # 분리된 예측 함수 호출
+            # 예측 값 계산
             predicted_value = self.predict_with_linear_regression(years, values, [[2024]])
 
             # 그래프 생성
@@ -80,6 +84,69 @@ class Plotter:
 
         except Exception as e:
             print(f"[Unexpected Error - Graph Creation]: {e}")
+            raise
+
+    def _calculate_cost_of_sales(self):
+        """
+        매출원가를 매출액과 매출총이익을 이용하여 계산합니다.
+        :return: 계산된 매출원가 데이터 (DataFrame)
+        """
+        try:
+            revenue_data = self.data[(self.data['회사명'] == self.company_name) &
+                                     (self.data['항목코드'] == "ifrs-full_Revenue")][['연도', '당기']]
+            gross_profit_data = self.data[(self.data['회사명'] == self.company_name) &
+                                          (self.data['항목코드'] == "ifrs-full_GrossProfit")][['연도', '당기']]
+
+            # 매출액 또는 매출총이익 데이터가 없으면 매출원가를 계산하지 않음
+            if revenue_data.empty or gross_profit_data.empty:
+                print("[Debug] Missing revenue or gross profit data, cannot calculate cost of sales.")
+                return pd.DataFrame()
+
+            # 데이터 전처리
+            revenue_data['당기'] = revenue_data['당기'].astype(str).str.replace(',', '').astype(float)
+            gross_profit_data['당기'] = gross_profit_data['당기'].astype(str).str.replace(',', '').astype(float)
+
+            # 매출원가 계산
+            cost_of_sales_data = revenue_data.copy()
+            cost_of_sales_data['당기'] = revenue_data['당기'] - gross_profit_data['당기']
+            cost_of_sales_data['항목코드'] = "ifrs-full_CostOfSales"
+            cost_of_sales_data['항목명'] = "매출원가"
+
+            print(f"[Debug] Calculated cost of sales data:\n{cost_of_sales_data}")
+            return cost_of_sales_data
+
+        except Exception as e:
+            print(f"[Error - Calculating Cost of Sales]: {e}")
+            return pd.DataFrame()
+
+    @staticmethod
+    def predict_with_linear_regression(years, values, target_year):
+        """
+        선형 회귀 모델을 사용하여 target_year 값을 예측합니다.
+        """
+        try:
+            # 쉼표 제거 및 float 변환
+            values = np.array(values)
+            if values.dtype == 'object':  # 문자열 타입일 경우 처리
+                values = np.char.replace(values.astype(str), ',', '').astype(float)
+
+            # 연도를 2차원 배열로 변환
+            years = np.array(years).reshape(-1, 1)
+
+            # target_year이 정수일 경우 2차원 배열로 변환
+            if isinstance(target_year, int):
+                target_year = np.array([[target_year]])
+
+            # 선형 회귀 모델 학습
+            model = LinearRegression()
+            model.fit(years, values)
+
+            # target_year 값 예측
+            predicted_value = model.predict(target_year)[0]
+            return predicted_value
+
+        except Exception as e:
+            print(f"[Error - Prediction]: {e}")
             raise
 
     def save_graph_as_png(self, fig, item_code, data_type):
@@ -143,37 +210,4 @@ class Plotter:
 
         except Exception as e:
             print(f"[Unexpected Error - File Save]: {e}")
-            raise
-
-    @staticmethod
-    def predict_with_linear_regression(years, values, target_year):
-        """
-        주어진 데이터로 선형 회귀 모델을 학습하고 target_year에 대한 값을 예측합니다.
-        :param years: 연도 데이터 (1차원 또는 2차원 배열)
-        :param values: 값 데이터 (1차원 배열, 문자열로 되어 있을 경우에도 처리 가능)
-        :param target_year: 예측할 연도 (정수 또는 2D 배열)
-        :return: target_year에 대한 예측 값
-        """
-        try:
-            # 데이터를 2차원 배열로 변환
-            years = np.array(years).reshape(-1, 1)
-
-            # values가 문자열일 경우 전처리 (쉼표 제거 및 float 변환)
-            if values.dtype == 'object':  # numpy 배열에서 문자열 타입 확인
-                values = np.char.replace(values.astype(str), ',', '').astype(float)
-
-            # target_year이 정수로 들어왔을 경우 2D 배열로 변환
-            if isinstance(target_year, int):
-                target_year = np.array([[target_year]])
-
-            # 선형 회귀 모델 학습
-            model = LinearRegression()
-            model.fit(years, values)
-
-            # target_year 예측
-            predicted_value = model.predict(target_year)[0]  # target_year는 2D 배열이어야 함
-            return predicted_value
-
-        except Exception as e:
-            print(f"[Error - Prediction]: {e}")
             raise
