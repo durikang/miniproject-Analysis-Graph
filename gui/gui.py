@@ -10,7 +10,10 @@ from gui.analysis_window import AnalysisWindow
 from gui.options_window import OptionsWindow
 from.CsvConvertWindow import CsvConvertWindow
 from update.UpdateWindow import UpdateWindow
-
+from analysis.ExcelFormatter import ExcelFormatter
+from analysis.plotter import Plotter  # Plotter를 추가로 가져옵니다.
+from utils.utils import open_folder  # utils 모듈에서 open_folder 함수를 가져옵니다.
+import traceback  # traceback 모듈 추가
 
 class FinancialApp(QWidget):
     def __init__(self):
@@ -158,23 +161,76 @@ class FinancialApp(QWidget):
             self.company_list.addItem(item)
 
     def run_analysis(self):
-        """선택된 회사들에 대한 분석을 실행합니다."""
+        """선택된 회사들에 대한 분석을 실행하고 결과를 저장하며, 결과 폴더를 엽니다."""
         try:
+            # 선택된 회사 리스트 가져오기
             selected_companies = [self.selected_list.item(i).text() for i in range(self.selected_list.count())]
             if not selected_companies:
                 QMessageBox.warning(self, "경고", "분석을 실행할 회사를 선택하세요.")
                 return
 
+            # 데이터 경로 로드
             balance_path = self.config.get("balance_data_path", "")
             income_path = self.config.get("income_data_path", "")
 
+            # 데이터 로드
             income_statement_data, balance_sheet_data = data_manager.prepare_data_for_analysis(
                 balance_path, income_path, selected_companies
             )
 
+            # JSON 파일에서 항목 코드와 명칭을 불러오기
+            item_codes = config_manager.load_item_codes()
+            INCOME_STATEMENT_ITEM_CODES = item_codes["INCOME_STATEMENT_ITEM_CODES"]
+            BALANCE_SHEET_ITEM_CODES = item_codes["BALANCE_SHEET_ITEM_CODES"]
+
+            # Excel 저장 기능 추가
+            excel_formatter = ExcelFormatter()  # 엑셀 포맷터 초기화
+
+            for idx, company in enumerate(selected_companies):
+                start_row = idx * 17 + 1  # 각 회사의 데이터를 시작할 행 계산
+                filtered_income_data = income_statement_data[income_statement_data["회사명"] == company]
+                filtered_balance_data = balance_sheet_data[balance_sheet_data["회사명"] == company]
+
+                # 필터링된 데이터를 사용해 엑셀 섹션 생성
+                excel_formatter.create_section(start_row, company, filtered_income_data, filtered_balance_data)
+
+            # Excel 파일 저장
+            excel_formatter.save_file()
+            print(f"[INFO] Excel file saved successfully at '{excel_formatter.output_file}'.")
+
+            # 각 회사와 항목에 대해 PNG 저장 기능 실행
+            for company in selected_companies:
+                for item_code, item_name in {**INCOME_STATEMENT_ITEM_CODES, **BALANCE_SHEET_ITEM_CODES}.items():
+                    try:
+                        # 데이터 타입에 따라 적절한 데이터프레임 선택
+                        data = income_statement_data if item_code in INCOME_STATEMENT_ITEM_CODES else balance_sheet_data
+
+                        # Plotter 인스턴스를 생성하여 그래프 생성 및 PNG 저장
+                        plotter = Plotter(company, data)
+                        fig = plotter.create_graph(item_code, item_name)
+
+                        # PNG 파일로 저장
+                        plotter.save_graph_as_png(
+                            fig, item_code,
+                            "손익계산서" if item_code in INCOME_STATEMENT_ITEM_CODES else "재무상태표"
+                        )
+
+                    except ValueError as ve:
+                        print(
+                            f"[Warning] Skipping item '{item_name}' for company '{company}' due to missing data: {ve}")
+                        continue  # 데이터가 없는 경우 해당 항목을 생략하고 다음 항목으로 넘어갑니다
+
+            # 분석 창 열기
             self.open_analysis_window(income_statement_data, balance_sheet_data)
+
+            # 저장 폴더 열기
+            # png_save_path = config_manager.get_png_save_path()
+            # open_folder(png_save_path)
+
         except Exception as e:
+            # 예외 발생 시 디버깅 정보 출력
             print(f"분석 실행 중 오류 발생: {e}")
+            traceback.print_exc()  # 스택 추적 정보 출력
             QMessageBox.critical(self, "오류", f"분석 실행 중 오류 발생: {e}")
 
     def open_analysis_window(self, income_statement_data, balance_sheet_data):

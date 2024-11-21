@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 ('C:\\Users\\CAD09\\Desktop\\projectMini\\build\\main\\main.pkg',
+=======
+('C:\\Users\\CAD09\\Downloads\\miniproject-Analysis-Graph-1.0.4\\build\\main\\main.pkg',
+>>>>>>> caacf80 (Initial commit with version 1.1 modifications)
  {'BINARY': 1,
   'DATA': 1,
   'EXECUTABLE': 1,
@@ -8,10 +12,17 @@
   'PYZ': 0,
   'SPLASH': 1},
  [('PYZ-00.pyz',
+<<<<<<< HEAD
    'C:\\Users\\CAD09\\Desktop\\projectMini\\build\\main\\PYZ-00.pyz',
    'PYZ'),
   ('struct',
    'C:\\Users\\CAD09\\Desktop\\projectMini\\build\\main\\localpycos\\struct.pyo',
+=======
+   'C:\\Users\\CAD09\\Downloads\\miniproject-Analysis-Graph-1.0.4\\build\\main\\PYZ-00.pyz',
+   'PYZ'),
+  ('struct',
+   'C:\\Users\\CAD09\\Downloads\\miniproject-Analysis-Graph-1.0.4\\build\\main\\localpycos\\struct.pyo',
+>>>>>>> caacf80 (Initial commit with version 1.1 modifications)
    'PYMODULE'),
   ('pyimod01_os_path',
    'C:\\Users\\CAD09\\Desktop\\projectMini\\.venv\\lib\\site-packages\\PyInstaller\\loader\\pyimod01_os_path.pyc',
@@ -52,7 +63,13 @@
   ('pyi_rth_pyqt5webengine',
    'C:\\Users\\CAD09\\Desktop\\projectMini\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pyqt5webengine.py',
    'PYSOURCE'),
+<<<<<<< HEAD
   ('main', 'C:\\Users\\CAD09\\Desktop\\projectMini\\main.py', 'PYSOURCE')],
+=======
+  ('main',
+   'C:\\Users\\CAD09\\Downloads\\miniproject-Analysis-Graph-1.0.4\\main.py',
+   'PYSOURCE')],
+>>>>>>> caacf80 (Initial commit with version 1.1 modifications)
  True,
  False,
  False,

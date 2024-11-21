@@ -1,3 +1,5 @@
+# option_window.py
+
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox
 from config import config_manager
 from .path_settings import PathSettings
