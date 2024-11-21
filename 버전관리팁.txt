@@ -1,0 +1,11 @@
+커밋 및 푸시:
+
+git add .
+git commit -m "새로운 업데이트"
+git push
+새 태그 생성:
+
+git tag v1.0.1
+태그 푸시:
+
+git push origin v1.0.1

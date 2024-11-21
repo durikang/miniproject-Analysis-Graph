@@ -1,0 +1,11 @@
+{
+    "income_data_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/IS",
+    "income_result_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/IS_graph",
+    "balance_data_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/BS",
+    "balance_result_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/BS_graph",
+    "png_save_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/PNG",
+    "csv_save_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/CSV",
+    "bs_raw_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/BS_raw",
+    "is_raw_path": "C:/Users/CAD09/Downloads/miniproject-Analysis-Graph-1.0.4/datasets/IS_raw",
+    "metadata_path": "C:\\Users\\CAD09\\Desktop\\projectMini\\config\\metadata.json"
+}
